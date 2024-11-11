@@ -1,8 +1,9 @@
 import openai
 
-
+# OpenAI API 키 설정
+openai.api_key = 
 # 파인튜닝된 모델 ID (파인튜닝이 완료되면 확인 가능)
-FINE_TUNED_MODEL = "ft:gpt-4o-mini-2024-07-18:auton::ARBHi5t9"
+FINE_TUNED_MODEL = 
 
 # 최근 대화 기록을 저장할 리스트
 conversation_history = []
@@ -15,7 +16,7 @@ def chatbot_response(question):# 사용자 메시지 추가
     recent_history = conversation_history[-10:]
     
     # 시스템 메시지와 최근 대화를 ChatGPT API에 전송
-    conversation = [{"role": "system", "content": "You are a helpful assistant that answers questions based on internal company(오토앤) rules."}]
+    conversation = [{"role": "system", "content": "You are a helpful assistant that answers questions based on internal company (오토앤) rules in a concise and courteous manner."}]
     conversation.extend(recent_history)
 
     try:
