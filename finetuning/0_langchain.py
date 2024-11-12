@@ -3,10 +3,9 @@ from langchain_openai import ChatOpenAI
 from langchain.chains import ConversationChain
 from langchain.memory import ConversationSummaryBufferMemory
 
-openai_api_key = 
 
 # 대화 모델과 메모리 설정
-llm = ChatOpenAI(model="gpt-3.5-turbo", openai_api_key = openai_api_key)
+llm = ChatOpenAI(model="gpt-3.5-turbo",  = )
 memory = ConversationSummaryBufferMemory(llm=llm)
 
 conversation = ConversationChain(llm=llm, memory=memory)
