@@ -1,8 +1,12 @@
+import os
 import openai
 from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
+from dotenv import load_dotenv
+load_dotenv()
+openai_api_key = os.getenv("OPENAI_API_KEY")
 
 # 파인튜닝된 모델 ID (파인튜닝이 완료되면 확인 가능)
 FINE_TUNED_MODEL = "ft:gpt-4o-mini-2024-07-18:auton::ARBHi5t9"

@@ -1,9 +1,12 @@
 import openai
+import os
 
-# OpenAI API 키 설정
-openai.api_key = 
+from dotenv import load_dotenv
+load_dotenv()
+openai_api_key = os.getenv("OPENAI_API_KEY")
+
 # 파인튜닝된 모델 ID (파인튜닝이 완료되면 확인 가능)
-FINE_TUNED_MODEL = 
+FINE_TUNED_MODEL = "ft:gpt-4o-2024-08-06:auton::ASh95CCN"
 
 # 최근 대화 기록을 저장할 리스트
 conversation_history = []
