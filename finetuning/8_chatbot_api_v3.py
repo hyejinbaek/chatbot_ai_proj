@@ -7,9 +7,9 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain_core.prompts import PromptTemplate
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain.document_loaders import PyMuPDFLoader, PyPDFLoader, TextLoader
-from langchain_core.documents import Document
 from flask import Flask, request, jsonify
 import unicodedata
+from langchain.schema import Document
 from docx import Document as DocxDocument
 
 app = Flask(__name__)
@@ -25,8 +25,10 @@ def load_docx(file_path):
     full_text = []
     for paragraph in doc.paragraphs:
         full_text.append(paragraph.text)
-    
-    return [{"page_content": "\n".join(full_text)}]
+
+    # Return a list of langchain Document objects with page_content
+    return [Document(page_content="\n".join(full_text))]
+
 
 def load_document(file_path):
     # 파일 경로의 특수 문자 처리: 정규화
