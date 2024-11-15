@@ -108,6 +108,7 @@ else:
     Please use the trained model and the following retrieved context to answer these questions. 
     If you don't know the answer, politely suggest they contact the HR department. 
     Respond in Korean in a courteous and friendly manner.
+    When the user greets you or asks a question, respond politely and courteously.
 
     #Question: 
     {question} 

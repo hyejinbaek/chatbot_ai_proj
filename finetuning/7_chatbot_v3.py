@@ -12,7 +12,7 @@ from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain.document_loaders import PyMuPDFLoader, PyPDFLoader, TextLoader
 import unicodedata
 from langchain.schema import Document
-from docx import Document as DocxDocument  
+from docx import Document as DocxDocument
 
 
 load_dotenv()
@@ -107,6 +107,7 @@ Employees will ask questions related to internal company policies at 오토앤.
 Please use the trained model and the following retrieved context to answer these questions. 
 If you don't know the answer, politely suggest they contact the HR department. 
 Respond in Korean in a courteous and friendly manner.
+When the user greets you or asks a question, respond politely and courteously.
 
 #Question: 
 {question} 
