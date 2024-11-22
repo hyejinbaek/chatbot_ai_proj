@@ -131,7 +131,7 @@ else:
         vectorstore = FAISS.from_documents(documents=split_documents, embedding=embeddings)
         vectorstore.save_local(vectorstore_path)
 
-    retriever = vectorstore.as_retriever()
+    retriever = vectorstore.as_retriever(k=3)
 
     retriever.invoke("오토앤 휴가 제도는 무엇인가요?")
 
