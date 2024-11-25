@@ -1,3 +1,5 @@
+# gpt-4o-mini + langchain
+
 import os
 import json
 import uuid
@@ -14,6 +16,7 @@ import unicodedata
 from langchain.schema import Document
 from docx import Document as DocxDocument
 from datetime import datetime
+import pandas as pd
 
 app = Flask(__name__)
 
@@ -25,7 +28,7 @@ fine_tuned_model = 'gpt-4o-mini'
 # 대화 기록 저장 경로
 def get_conversation_log_path():
     today_date = datetime.now().strftime("%Y%m%d")
-    return f"conversation_logs_{today_date}.json"
+    return f"./log/conversation_logs_{today_date}.json"
 
 # 대화 기록 로드 또는 초기화
 def load_conversation_logs():
@@ -68,6 +71,22 @@ def format_context(recent_context):
         context += f"[대화 {idx+1}] 질문: {entry['question']}, 답변: {entry['answer']}\n"
     return context
 
+# 엑셀 파일 로드 함수
+def load_excel(file_path):
+    print(f"Loading Excel file: {file_path}")  # 디버깅: 엑셀 파일 경로 출력
+    try:
+        # pandas로 엑셀 파일을 로드하여 데이터프레임으로 변환
+        df = pd.read_excel(file_path, engine='openpyxl')  # 엑셀 파일 읽기
+        print(f"Excel file loaded successfully: {file_path}")  # 디버깅: 로드 성공 출력
+        # 각 행을 문서로 변환하여 페이지 콘텐츠에 추가
+        full_text = []
+        for index, row in df.iterrows():
+            full_text.append(" ".join(str(cell) for cell in row))  # 각 셀의 값을 공백으로 구분하여 결합
+        return [Document(page_content="\n".join(full_text))]
+    except Exception as e:
+        print(f"Error loading Excel file: {e}")  # 디버깅: 오류 출력
+        return []
+
 # .docx 파일 로드
 def load_docx(file_path):
     doc = DocxDocument(file_path)
@@ -78,6 +97,7 @@ def load_docx(file_path):
 
 def load_document(file_path):
     file_path = unicodedata.normalize('NFKC', file_path)
+    print(f"Checking file type: {file_path}")  # 디버깅: 파일 유형 확인
     if file_path.endswith('.pdf'):
         loader = PyMuPDFLoader(file_path=file_path)
         documents = loader.load()
@@ -86,17 +106,27 @@ def load_document(file_path):
         documents = loader.load()
     elif file_path.endswith('.docx'):
         documents = load_docx(file_path)
+    elif file_path.endswith('.xlsx'):
+        documents = load_excel(file_path)
     else:
         raise ValueError("지원되지 않는 파일 형식입니다.")
     return documents
 
+loaded_files = {}  # 파일 수정 시간 기록을 위한 딕셔너리
+
+
 def load_all_documents_in_folder(folder_path):
     docs = []
+    print(f"Listing files in folder: {folder_path}")  # 디버깅: 폴더 내 파일 목록 출력
     for filename in os.listdir(folder_path):
         file_path = os.path.join(folder_path, filename)
-        if filename.endswith(('.pdf', '.txt', '.docx')):
+        if filename.endswith(('.pdf', '.txt', '.docx', '.xlsx')):  # 엑셀 파일도 포함
             try:
-                docs.extend(load_document(file_path))
+                # 새 파일이나 수정된 파일만 로드
+                print(f"Loading file: {file_path}")  # 디버깅: 파일 경로 출력
+                if file_path not in loaded_files or os.path.getmtime(file_path) > loaded_files[file_path]:
+                    docs.extend(load_document(file_path))
+                    loaded_files[file_path] = os.path.getmtime(file_path)
             except Exception as e:
                 print(f"{filename} 로드 중 오류: {e}")
     return docs
@@ -106,12 +136,26 @@ folder_path = "./dataset"
 docs = load_all_documents_in_folder(folder_path)
 print(f"총 문서 수: {len(docs)}")
 
+for doc in docs:
+    #print(doc.page_content)  # 문서 내용 출력
+    # 문서 내용을 파일로 저장하는 코드
+    with open("document_contents.txt", "w", encoding="utf-8") as file:
+        for doc in docs:
+            # 문서의 내용을 파일에 기록
+            file.write(doc.page_content + "\n\n")  # 문서 내용 뒤에 줄바꿈 추가
+
 if not docs:
     print("로드된 문서가 없습니다. 문제를 확인해 주세요.")
 else:
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=50)
+    # 문서를 청크로 나누기 위한 분할기 설정
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=1000,  # 청크 크기 (조정 가능)
+        chunk_overlap=200,  # 청크가 겹치는 부분 (조정 가능)
+        length_function=len,
+    )
     split_documents = text_splitter.split_documents(docs)
     print(f"문서 분할 완료: {len(split_documents)} 개 문서")
+    
 
     embeddings = OpenAIEmbeddings()
 
@@ -133,7 +177,9 @@ else:
 
     retriever = vectorstore.as_retriever(k=3)
 
-    retriever.invoke("오토앤 휴가 제도는 무엇인가요?")
+    results = retriever.invoke("오토앤 직급체계는 무엇인가요?")
+    print("검색 결과:", results)
+    
 
     prompt = PromptTemplate.from_template(
         """
@@ -185,6 +231,9 @@ else:
     def ask_question(session_id, question):
         recent_context = get_recent_context(session_id)
         formatted_context = format_context(recent_context)
+        # print(f"Searching for context with question: {question}")
+        print(f"Context found: {formatted_context}")
+
         full_input = f"""
         # 최근 대화 기록:
         {formatted_context}
@@ -194,6 +243,7 @@ else:
         """
         try:
             response = chain.invoke(full_input)
+            print("프롬프트 입력값:", full_input)
             save_conversation_log(session_id, question, response)
             return response
         except Exception as e:
