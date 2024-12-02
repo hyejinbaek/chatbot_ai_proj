@@ -18,6 +18,7 @@ from langchain.schema import Document
 from docx import Document as DocxDocument
 from datetime import datetime
 import pandas as pd
+import threading
 
 app = Flask(__name__)
 
@@ -25,6 +26,22 @@ load_dotenv()
 app.secret_key = os.getenv('FLASK_SECRET_KEY')
 openai_api_key = os.getenv("OPENAI_API_KEY")
 fine_tuned_model = 'ft:gpt-3.5-turbo-1106:auton::AXJCxOp9'
+
+log_lock = threading.Lock()
+
+def save_conversation_log(session_id, question, answer):
+    with log_lock:  # 파일 접근을 동기화
+        if session_id not in conversation_logs:
+            conversation_logs[session_id] = []
+        conversation_logs[session_id].append({
+            "timestamp": datetime.now().isoformat(),
+            "question": question,
+            "answer": answer
+        })
+
+        conversation_log_path = get_conversation_log_path()
+        with open(conversation_log_path, 'w', encoding='utf-8') as f:
+            json.dump(conversation_logs, f, ensure_ascii=False, indent=4)
 
 # 대화 기록 저장 경로
 def get_conversation_log_path():
@@ -45,20 +62,6 @@ conversation_logs = load_conversation_logs()
 def generate_session_id():
     return str(uuid.uuid4())
 
-# 대화 기록 저장 함수
-def save_conversation_log(session_id, question, answer):
-    if session_id not in conversation_logs:
-        conversation_logs[session_id] = []
-    conversation_logs[session_id].append({
-        "timestamp": datetime.now().isoformat(),
-        "question": question,
-        "answer": answer
-    })
-    
-    # 날짜별 대화 기록 파일에 저장
-    conversation_log_path = get_conversation_log_path()
-    with open(conversation_log_path, 'w', encoding='utf-8') as f:
-        json.dump(conversation_logs, f, ensure_ascii=False, indent=4)
 
 # 이전 대화 기록 불러오기
 def get_recent_context(session_id, max_history=5):
@@ -192,6 +195,8 @@ else:
         6. 사용자가 너의(AI챗봇) 존재를 묻는다면 친절하게 설명해주세요. 예를 들어,
         - 오토앤에 대해 궁금한 점이 있으시군요! 회사의 정책, 절차, 복리후생, 휴가 제도 등 다양한 정보를 제공할 수 있습니다. 어떤 특정한 정보가 필요하신가요? 예를 들어, "휴가 제도에 대해 알고 싶어요" 또는 "복리후생이 어떤 게 있나요?"와 같이 구체적으로 질문해 주시면 더 정확한 답변을 드릴 수 있습니다.
         와 같이 친절하게 다양한 표현으로 설명하세요.
+        7. 말투를 다정하고 따뜻하게 이모티콘도 쓰면서 답변하세요.
+
         
         **주의사항**:
         - 응답은 너무 길거나 복잡하지 않게 간결하고 친절하게 작성합니다.

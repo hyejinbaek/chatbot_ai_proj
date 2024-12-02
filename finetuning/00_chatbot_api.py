@@ -17,6 +17,7 @@ from langchain.schema import Document
 from docx import Document as DocxDocument
 from datetime import datetime
 import pandas as pd
+import threading
 
 app = Flask(__name__)
 
@@ -24,6 +25,22 @@ load_dotenv()
 app.secret_key = os.getenv('FLASK_SECRET_KEY')
 openai_api_key = os.getenv("OPENAI_API_KEY")
 fine_tuned_model = 'gpt-4o-mini'
+
+log_lock = threading.Lock()
+
+def save_conversation_log(session_id, question, answer):
+    with log_lock:  # 파일 접근을 동기화
+        if session_id not in conversation_logs:
+            conversation_logs[session_id] = []
+        conversation_logs[session_id].append({
+            "timestamp": datetime.now().isoformat(),
+            "question": question,
+            "answer": answer
+        })
+
+        conversation_log_path = get_conversation_log_path()
+        with open(conversation_log_path, 'w', encoding='utf-8') as f:
+            json.dump(conversation_logs, f, ensure_ascii=False, indent=4)
 
 # 대화 기록 저장 경로
 def get_conversation_log_path():
@@ -44,20 +61,6 @@ conversation_logs = load_conversation_logs()
 def generate_session_id():
     return str(uuid.uuid4())
 
-# 대화 기록 저장 함수
-def save_conversation_log(session_id, question, answer):
-    if session_id not in conversation_logs:
-        conversation_logs[session_id] = []
-    conversation_logs[session_id].append({
-        "timestamp": datetime.now().isoformat(),
-        "question": question,
-        "answer": answer
-    })
-    
-    # 날짜별 대화 기록 파일에 저장
-    conversation_log_path = get_conversation_log_path()
-    with open(conversation_log_path, 'w', encoding='utf-8') as f:
-        json.dump(conversation_logs, f, ensure_ascii=False, indent=4)
 
 # 이전 대화 기록 불러오기
 def get_recent_context(session_id, max_history=5):
