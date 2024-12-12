@@ -1,3 +1,4 @@
+# openai = 1.57.3
 # vector store값 불러온 챗봇
 
 import os
